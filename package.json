@@ -1,0 +1,25 @@
+{
+  "name": "trialscope",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Search clinical trials, medical research, FDA approvals and safety recalls from one place",
+  "license": "MIT",
+  "scripts": {
+    "build": "node scripts/build.js",
+    "start": "npm run build && http-server dist -p 8080 -c-1",
+    "lint": "biome lint assets/js tests scripts",
+    "lint:fix": "biome lint --write assets/js tests scripts",
+    "test": "node tests/smoke.test.js",
+    "test:a11y": "node tests/a11y.test.js",
+    "test:all": "npm run lint && npm test && npm run test:a11y",
+    "lighthouse": "npm run build && npx --yes @lhci/cli autorun",
+    "prepare": "git config core.hooksPath .githooks || true"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
+    "@biomejs/biome": "^2.5.10",
+    "axe-core": "^4.13.0",
+    "http-server": "14.1.1",
+    "playwright": "^1.56.0"
+  }
+}

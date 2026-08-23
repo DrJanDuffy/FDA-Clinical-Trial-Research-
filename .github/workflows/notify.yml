@@ -1,0 +1,46 @@
+name: Notify — ops webhook
+
+on:
+  push:
+    branches: [main]
+  release:
+    types: [published]
+  workflow_dispatch:
+
+# Posts a small JSON payload to a Zapier (or Make / n8n) catch hook, which can
+# then fan out to Notion, Asana, Slack or email. Keeping the fan-out in Zapier
+# rather than here means changing the destination never touches this repo.
+#
+# Enable:  repository variable ENABLE_OPS_NOTIFY = true
+# Secret:  ZAPIER_HOOK_URL
+# Least privilege: nothing here needs to write to the repository.
+permissions:
+  contents: read
+
+jobs:
+  notify:
+    if: vars.ENABLE_OPS_NOTIFY == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - name: Post to webhook
+        env:
+          HOOK: ${{ secrets.ZAPIER_HOOK_URL }}
+        run: |
+          if [ -z "$HOOK" ]; then
+            echo "ZAPIER_HOOK_URL is not set — nothing to notify."
+            exit 0
+          fi
+          jq -n \
+            --arg event   "${{ github.event_name }}" \
+            --arg repo    "${{ github.repository }}" \
+            --arg ref     "${{ github.ref_name }}" \
+            --arg sha     "${{ github.sha }}" \
+            --arg actor   "${{ github.actor }}" \
+            --arg url     "${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}" \
+            --arg subject "$(git log -1 --pretty=%s)" \
+            '{event:$event, repo:$repo, ref:$ref, sha:$sha, actor:$actor, url:$url, subject:$subject}' \
+          | curl -sS --fail-with-body -X POST -H 'Content-Type: application/json' -d @- "$HOOK"

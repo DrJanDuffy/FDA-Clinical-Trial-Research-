@@ -1,0 +1,41 @@
+name: Deploy — Cloudflare Pages
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Disabled until you opt in, so an unconfigured account never fails CI.
+# Enable:  repository variable ENABLE_CLOUDFLARE_PAGES = true
+# Secrets: CLOUDFLARE_API_TOKEN (Cloudflare Pages:Edit), CLOUDFLARE_ACCOUNT_ID
+# Variable CLOUDFLARE_PROJECT_NAME overrides the default project name.
+# Least privilege: nothing here needs to write to the repository.
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    if: vars.ENABLE_CLOUDFLARE_PAGES == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: >-
+            pages deploy dist
+            --project-name=${{ vars.CLOUDFLARE_PROJECT_NAME || 'trialscope' }}
+            --branch=${{ github.head_ref || github.ref_name }}

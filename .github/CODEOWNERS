@@ -1,0 +1,8 @@
+# Default owner for everything in this repository.
+*                       @DrJanDuffy
+
+# The API adapters are the part most likely to break silently when an upstream
+# schema changes, so flag them explicitly on review.
+/assets/js/sources.js   @DrJanDuffy
+/tests/                 @DrJanDuffy
+/.github/               @DrJanDuffy

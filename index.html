@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TrialScope — FDA Trials &amp; Medical Research Finder</title>
+<meta name="description" content="Search live clinical trials, peer-reviewed medical research, FDA drug and device approvals, and safety recalls from one place. Data from ClinicalTrials.gov, Europe PMC and openFDA.">
+<link rel="stylesheet" href="assets/css/styles.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#129516;</text></svg>">
+</head>
+<body>
+
+<a class="skip-link" href="#results">Skip to results</a>
+
+<header class="site-header">
+  <div class="wrap header-inner">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 2v6.5L4.2 17a3 3 0 0 0 2.6 4.5h10.4A3 3 0 0 0 19.8 17L15 8.5V2"/>
+          <path d="M8 2h8M6.5 14h11"/>
+        </svg>
+      </span>
+      <span class="brand-text">
+        <strong>TrialScope</strong>
+        <small>FDA trials &amp; medical research, in one search</small>
+      </span>
+    </div>
+    <div class="header-actions">
+      <button type="button" class="btn btn-ghost" id="watchlistBtn" title="Show saved results">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+        Saved <span class="pill" id="watchCount">0</span>
+      </button>
+      <button type="button" class="btn btn-ghost btn-icon" id="themeBtn" aria-label="Toggle colour theme" title="Toggle theme">
+        <svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        <svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<section class="searchbar">
+  <div class="wrap">
+    <form id="searchForm" role="search">
+      <div class="search-row">
+        <div class="search-field">
+          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <input type="search" id="q" name="q" autocomplete="off" spellcheck="false"
+                 placeholder="Search a condition, drug or topic — e.g. pancreatic cancer, semaglutide, CAR-T">
+          <button type="button" class="clear-btn" id="clearQ" aria-label="Clear search" hidden>&times;</button>
+        </div>
+        <button type="submit" class="btn btn-primary">Search</button>
+      </div>
+      <div class="suggestions" id="suggestions" aria-label="Example searches">
+        <span class="sug-label">Try:</span>
+        <button type="button" class="chip" data-q="glioblastoma">glioblastoma</button>
+        <button type="button" class="chip" data-q="alzheimer's disease">alzheimer's disease</button>
+        <button type="button" class="chip" data-q="semaglutide">semaglutide</button>
+        <button type="button" class="chip" data-q="CAR-T lymphoma">CAR-T lymphoma</button>
+        <button type="button" class="chip" data-q="sickle cell gene therapy">sickle cell gene therapy</button>
+        <button type="button" class="chip" data-q="long covid">long covid</button>
+      </div>
+    </form>
+  </div>
+</section>
+
+<nav class="tabs" aria-label="Data sources">
+  <div class="wrap tabs-inner" role="tablist">
+    <button role="tab" class="tab is-active" id="tab-overview" data-tab="overview"   aria-selected="true">Overview</button>
+    <button role="tab" class="tab" id="tab-trials" data-tab="trials"    aria-selected="false">Clinical Trials</button>
+    <button role="tab" class="tab" id="tab-research" data-tab="research"  aria-selected="false">Research</button>
+    <button role="tab" class="tab" id="tab-approvals" data-tab="approvals" aria-selected="false">FDA Approvals</button>
+    <button role="tab" class="tab" id="tab-safety" data-tab="safety"    aria-selected="false">Safety &amp; Recalls</button>
+    <button role="tab" class="tab" id="tab-watchlist" data-tab="watchlist" aria-selected="false">Saved</button>
+  </div>
+</nav>
+
+<main class="wrap main">
+
+  <!-- ============ FILTER PANELS ============ -->
+  <aside class="filters" id="filters">
+
+    <div class="filter-panel" data-panel="trials" hidden>
+      <div class="filter-grid">
+        <label class="fld"><span>Intervention / drug</span>
+          <input type="text" id="t_intr" placeholder="e.g. pembrolizumab"></label>
+        <label class="fld"><span>Location</span>
+          <input type="text" id="t_locn" placeholder="e.g. Boston, or Germany"></label>
+        <label class="fld"><span>Status</span>
+          <select id="t_status">
+            <option value="RECRUITING,NOT_YET_RECRUITING">Open to enrolment</option>
+            <option value="">Any status</option>
+            <option value="RECRUITING">Recruiting now</option>
+            <option value="ACTIVE_NOT_RECRUITING">Active, not recruiting</option>
+            <option value="COMPLETED">Completed</option>
+            <option value="TERMINATED,WITHDRAWN,SUSPENDED">Stopped</option>
+          </select></label>
+        <label class="fld"><span>Phase</span>
+          <select id="t_phase">
+            <option value="">Any phase</option>
+            <option value="0">Early Phase 1</option>
+            <option value="1">Phase 1</option>
+            <option value="2">Phase 2</option>
+            <option value="3">Phase 3</option>
+            <option value="4">Phase 4</option>
+          </select></label>
+        <label class="fld"><span>Study type</span>
+          <select id="t_type">
+            <option value="">Any type</option>
+            <option value="int">Interventional</option>
+            <option value="obs">Observational</option>
+            <option value="expa">Expanded access</option>
+          </select></label>
+        <label class="fld"><span>Sort by</span>
+          <select id="t_sort">
+            <option value="@relevance">Best match</option>
+            <option value="LastUpdatePostDate:desc">Recently updated</option>
+            <option value="StudyFirstPostDate:desc">Newest posted</option>
+          </select></label>
+      </div>
+    </div>
+
+    <div class="filter-panel" data-panel="research" hidden>
+      <div class="filter-grid">
+        <label class="fld"><span>Published</span>
+          <select id="r_since">
+            <option value="1">Past year</option>
+            <option value="3">Past 3 years</option>
+            <option value="5" selected>Past 5 years</option>
+            <option value="0">Any time</option>
+          </select></label>
+        <label class="fld"><span>Sort by</span>
+          <select id="r_sort">
+            <option value="">Best match</option>
+            <option value="P_PDATE_D desc">Newest first</option>
+            <option value="CITED desc">Most cited</option>
+          </select></label>
+        <label class="fld"><span>Source</span>
+          <select id="r_src">
+            <option value="any">Journals &amp; preprints</option>
+            <option value="MED">Peer-reviewed only (MEDLINE)</option>
+            <option value="PPR">Preprints only</option>
+          </select></label>
+        <label class="fld fld-check">
+          <input type="checkbox" id="r_oa"><span>Free full text only</span></label>
+        <label class="fld fld-check">
+          <input type="checkbox" id="r_rct"><span>Clinical trials / RCTs only</span></label>
+      </div>
+    </div>
+
+    <div class="filter-panel" data-panel="approvals" hidden>
+      <div class="filter-grid">
+        <label class="fld"><span>Product type</span>
+          <select id="a_kind">
+            <option value="drug">Drugs &amp; biologics (Drugs@FDA)</option>
+            <option value="pma">Devices — PMA (premarket approval)</option>
+            <option value="510k">Devices — 510(k) clearance</option>
+          </select></label>
+        <label class="fld"><span>Decision window</span>
+          <select id="a_since">
+            <option value="3">Past 3 months</option>
+            <option value="12" selected>Past 12 months</option>
+            <option value="36">Past 3 years</option>
+            <option value="120">Past 10 years</option>
+          </select></label>
+        <label class="fld fld-check">
+          <input type="checkbox" id="a_orig"><span>Original approvals only (no supplements)</span></label>
+      </div>
+      <p class="panel-note">Leave the search box empty to browse the most recent decisions across all products.</p>
+    </div>
+
+    <div class="filter-panel" data-panel="safety" hidden>
+      <div class="filter-grid">
+        <label class="fld"><span>Category</span>
+          <select id="s_kind">
+            <option value="drug">Drug recalls</option>
+            <option value="device">Device recalls</option>
+            <option value="food">Food recalls</option>
+          </select></label>
+        <label class="fld"><span>Severity</span>
+          <select id="s_class">
+            <option value="">Any classification</option>
+            <option value="Class I">Class I — serious harm or death</option>
+            <option value="Class II">Class II — temporary harm</option>
+            <option value="Class III">Class III — unlikely harm</option>
+          </select></label>
+        <label class="fld"><span>Reported</span>
+          <select id="s_since">
+            <option value="3">Past 3 months</option>
+            <option value="12" selected>Past 12 months</option>
+            <option value="36">Past 3 years</option>
+          </select></label>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- ============ RESULTS ============ -->
+  <section id="results" class="results" role="tabpanel" aria-labelledby="tab-overview" aria-live="polite" aria-busy="false">
+    <div class="hero-note" id="intro">
+      <h2>Search four official medical databases at once</h2>
+      <p>
+        Type a condition, a drug, or a research topic above. TrialScope queries
+        ClinicalTrials.gov, Europe PMC, and two openFDA endpoints live from your browser —
+        no account, no tracking, and every result links back to the original record.
+      </p>
+      <div class="hero-cards">
+        <button type="button" class="hero-card" data-goto="trials">
+          <strong>Clinical trials</strong>
+          <span>Studies you may be able to join, with status, phase, sponsor and sites.</span>
+        </button>
+        <button type="button" class="hero-card" data-goto="research">
+          <strong>Research papers</strong>
+          <span>Peer-reviewed literature and preprints, with abstracts and free-text links.</span>
+        </button>
+        <button type="button" class="hero-card" data-goto="approvals">
+          <strong>FDA approvals</strong>
+          <span>New drug, biologic and medical-device decisions as the FDA publishes them.</span>
+        </button>
+        <button type="button" class="hero-card" data-goto="safety">
+          <strong>Safety &amp; recalls</strong>
+          <span>Recall notices graded by how much harm the product could cause.</span>
+        </button>
+      </div>
+    </div>
+
+    <div id="resultsHead" class="results-head" hidden>
+      <p class="results-count" id="resultsCount"></p>
+      <button type="button" class="btn btn-ghost btn-sm" id="csvBtn" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+        Export CSV
+      </button>
+      <button type="button" class="btn btn-ghost btn-sm" id="risBtn" hidden
+              title="Citation file for Zotero, EndNote or Mendeley">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        Export RIS
+      </button>
+    </div>
+    <div id="resultsBody"></div>
+    <div class="more-wrap">
+      <button type="button" class="btn btn-outline" id="moreBtn" hidden>Load more results</button>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="foot-grid">
+      <div>
+        <h3>Where this data comes from</h3>
+        <p>Every result is fetched live, in your browser, straight from the official source. Nothing is cached, re-hosted or edited.</p>
+        <ul class="src-list">
+          <li>
+            <a href="https://clinicaltrials.gov/" rel="noopener">ClinicalTrials.gov</a> — U.S. NIH registry of clinical studies (API v2)
+            <span id="freshness" class="freshness"></span>
+          </li>
+          <li><a href="https://europepmc.org/" rel="noopener">Europe PMC</a> — indexes PubMed/MEDLINE, PMC and preprint servers</li>
+          <li><a href="https://open.fda.gov/" rel="noopener">openFDA</a> — Drugs@FDA, device PMA &amp; 510(k), enforcement reports</li>
+        </ul>
+        <p class="terms">
+          Use of this data is subject to each provider's terms —
+          <a href="https://clinicaltrials.gov/about-site/terms-conditions" rel="noopener">ClinicalTrials.gov</a>,
+          <a href="https://europepmc.org/Copyright" rel="noopener">Europe PMC</a> and
+          <a href="https://open.fda.gov/terms/" rel="noopener">openFDA</a>.
+        </p>
+      </div>
+      <div>
+        <h3>Important</h3>
+        <p class="disclaimer">
+          TrialScope is a search tool, not medical advice. Results are provided as-is from
+          public databases and may be incomplete or out of date — registry records are updated by
+          sponsors, not in real time. Never start, stop or change treatment based on what you find
+          here. Talk to a qualified healthcare professional, and confirm anything important against
+          the original record before acting on it.
+        </p>
+      </div>
+    </div>
+    <p class="colophon">Open source · no tracking, no accounts, no server — your searches go directly to the public APIs above.</p>
+  </div>
+</footer>
+
+<script src="assets/js/util.js"></script>
+<script src="assets/js/sources.js"></script>
+<script src="assets/js/render.js"></script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>
