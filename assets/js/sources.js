@@ -221,7 +221,16 @@
   function epmcQuery(state) {
     var parts = [];
     var term = safeTerm(state.q);
-    parts.push(term ? '(' + term + ')' : '(clinical trial)');
+
+    // Europe PMC treats an unquoted multi-word query as separate terms, so
+    // "hair loss" also matched papers about inner-ear *hair* cells and hearing
+    // *loss*. Quoting alone is not the answer either: it collapses genuine
+    // two-concept searches ("CAR-T lymphoma" drops from thousands of hits to
+    // 25). Asking for the phrase OR the loose form keeps the recall while
+    // relevance ranking floats true phrase matches to the top.
+    if (!term) parts.push('(clinical trial)');
+    else if (/\s/.test(term)) parts.push('("' + term + '" OR (' + term + '))');
+    else parts.push('(' + term + ')');
 
     if (state.r_since && state.r_since !== '0') {
       const from = new Date();

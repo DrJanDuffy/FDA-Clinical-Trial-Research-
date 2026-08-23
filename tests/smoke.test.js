@@ -162,6 +162,29 @@ async function runSuite(browser) {
   seenUrls.length = 0;
   await page.check('#r_oa');
   await page.waitForTimeout(600);
+  await step('multi-word query asks for the phrase first', async () => {
+    // Regression guard: an unquoted multi-word query made Europe PMC return
+    // hearing-loss papers for "hair loss".
+    seenUrls.length = 0;
+    await page.fill('#q', 'hair loss');
+    await page.click('#searchForm button[type=submit]');
+    await page.waitForTimeout(700);
+    const u = decodeURIComponent(seenUrls.find(x => x.includes('europepmc')) || '');
+    if (!/"hair\+?\s?loss"/.test(u.replace(/\+/g, ' '))) throw new Error('phrase not quoted: ' + u);
+    if (!/OR/.test(u)) throw new Error('loose fallback missing: ' + u);
+  });
+  await step('single-word query is not quoted', async () => {
+    seenUrls.length = 0;
+    await page.fill('#q', 'alopecia');
+    await page.click('#searchForm button[type=submit]');
+    await page.waitForTimeout(700);
+    const u = decodeURIComponent(seenUrls.find(x => x.includes('europepmc')) || '');
+    if (/"alopecia"/.test(u)) throw new Error('single word should not be phrase-quoted: ' + u);
+  });
+  await page.fill('#q', 'pancreatic cancer');
+  await page.click('#searchForm button[type=submit]');
+  await page.waitForTimeout(700);
+
   await step('open-access filter -> OPEN_ACCESS:y', async () => {
     const u = decodeURIComponent(seenUrls.find(x => x.includes('europepmc')) || '');
     if (!/OPEN_ACCESS:y/.test(u)) throw new Error(u);
