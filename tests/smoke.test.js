@@ -21,8 +21,7 @@ const LAUNCH = process.env.PLAYWRIGHT_CHROMIUM ? { executablePath: process.env.P
 const errors = [];
 const seenUrls = [];
 
-(async () => {
-  const browser = await chromium.launch(LAUNCH);
+async function runSuite(browser) {
   const page = await browser.newPage({ viewport: { width: 1280, height: 1000 } });
 
   page.on('pageerror', e => errors.push('PAGEERROR: ' + e.message));
@@ -299,11 +298,20 @@ const seenUrls = [];
   console.log('\n[12] aggFilters 400 fallback');
   await page.unroute('**/*');
   let sawFallback = false;
+  const CTG_PARAMS = new Set(['query.term', 'query.cond', 'query.intr', 'query.locn', 'query.titles',
+    'query.spons', 'query.id', 'filter.overallStatus', 'filter.geo', 'filter.ids', 'aggFilters',
+    'pageSize', 'pageToken', 'countTotal', 'sort', 'format', 'fields']);
   await page.route('**/*', route => {
     const url = route.request().url();
     if (url.startsWith('file://')) return route.continue();
     if (url.includes('clinicaltrials')) {
-      if (url.includes('aggFilters')) return route.fulfill({ status: 400, contentType: 'application/json', body: '{"message":"unknown param"}' });
+      // ClinicalTrials.gov rejects any unrecognised parameter with a 400.
+      const unknown = [...new URL(url).searchParams.keys()].filter(k => !CTG_PARAMS.has(k));
+      if (unknown.length) {
+        return route.fulfill({ status: 400, contentType: 'application/json',
+          body: JSON.stringify({ message: 'unknown parameter: ' + unknown.join(', ') }) });
+      }
+      if (url.includes('aggFilters')) return route.fulfill({ status: 400, contentType: 'application/json', body: '{"message":"unsupported aggFilters"}' });
       sawFallback = true;
       return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(F.ctg) });
     }
@@ -360,5 +368,19 @@ const seenUrls = [];
 
   console.log('\n--- JS errors: ' + (errors.length ? '\n' + errors.join('\n') : 'none') + ' ---');
   if (errors.length) process.exitCode = 1;
-  await browser.close();
+}
+
+// Anything outside a step() — navigation, routing, fixtures — can still throw.
+// Closing in `finally` means a setup failure reports itself instead of leaving
+// an orphaned browser and an unhandled rejection with no summary.
+(async () => {
+  const browser = await chromium.launch(LAUNCH);
+  try {
+    await runSuite(browser);
+  } catch (e) {
+    console.log('\nSUITE ABORTED — ' + (e && e.message));
+    process.exitCode = 1;
+  } finally {
+    await browser.close();
+  }
 })();

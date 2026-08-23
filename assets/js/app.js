@@ -123,7 +123,7 @@
   function showError(err, retry) {
     clearResults();
     var msg = err && err.status === 0
-      ? 'The data source could not be reached. This is usually a dropped connection, an offline network, or a browser extension blocking the request. Your search itself is fine — try again.'
+      ? (err.message || 'The data source could not be reached.') + ' Your search itself is fine — try again.'
       : 'The data source returned an error' + (err && err.status ? ' (HTTP ' + err.status + ')' : '') +
         (err && err.message ? ': ' + err.message : '.') + ' Public APIs also rate-limit heavy use, so waiting a moment often helps.';
     dom.body.appendChild(R.state('error', 'Something went wrong', msg, { label: 'Try again', onClick: retry }));
@@ -179,7 +179,9 @@
       showCount(
         'Showing <strong>' + U.number(shown) + '</strong>' +
         (typeof total === 'number' && total > shown ? ' of <strong>' + U.number(total) + '</strong>' : '') +
-        ' ' + U.pluralise(typeof total === 'number' ? total : shown, 'result') + ' from ' + escapeHTML(res.items[0].sourceLabel)
+        ' ' + U.pluralise(typeof total === 'number' ? total : shown, 'result') +
+        // read from the accumulated list: a "load more" page can come back empty
+        ' from ' + escapeHTML((current.items[0] || {}).sourceLabel || '')
       );
       dom.csv.hidden = false;
       dom.ris.hidden = false;
@@ -277,6 +279,7 @@
     clearResults();
     generation++;
     setBusy(false);
+    writeURL('watchlist', readState());
 
     if (!saved.length) {
       dom.body.appendChild(R.state('empty', 'Nothing saved yet',

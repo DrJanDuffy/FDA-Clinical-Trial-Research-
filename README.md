@@ -2,7 +2,7 @@
 
 A single search box over four official medical databases. Type a condition, a drug
 or a research topic and get back **clinical trials you might be able to join**,
-**peer-reviewed research**, **new FDA approvals**, and **safety recalls** — each
+**research papers and preprints**, **new FDA approvals**, and **safety recalls** — each
 result linking straight back to its original record.
 
 It is a static site. There is no server, no build step, no API key and no account:
@@ -121,7 +121,7 @@ Lint catches bugs; the formatter was only churning the diff.
 
 ## How it is put together
 
-```
+```text
 index.html               markup, filter controls and the static intro panel
 assets/css/styles.css    design tokens, light/dark themes, layout
 assets/js/util.js        DOM, date, fetch, export and storage helpers

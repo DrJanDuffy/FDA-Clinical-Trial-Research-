@@ -166,6 +166,10 @@
 
   function ctgSearch(state, cursor, signal) {
     var params = ctgQuery(state, cursor);
+    // Tracked in a closure, never in the request: ClinicalTrials.gov rejects any
+    // unrecognised query parameter with a 400, so smuggling a flag through the
+    // params object would break the very retry it is meant to enable.
+    var filterOnClient = false;
 
     function run(p) {
       return U.getJSON(U.qs(CTG_BASE, p), { signal: signal });
@@ -177,14 +181,14 @@
       if (err.status === 400 && params.aggFilters) {
         const fallback = {};
         Object.keys(params).forEach(function (k) { if (k !== 'aggFilters') fallback[k] = params[k]; });
-        fallback.__clientFilter = true;
-        return run(fallback).then(function (data) { data.__clientFilter = true; return data; });
+        filterOnClient = true;
+        return run(fallback);
       }
       throw err;
     }).then(function (data) {
       var studies = data.studies || [];
 
-      if (data.__clientFilter) {
+      if (filterOnClient) {
         const phaseMap = { '0': 'EARLY_PHASE1', '1': 'PHASE1', '2': 'PHASE2', '3': 'PHASE3', '4': 'PHASE4' };
         const typeMap = { int: 'INTERVENTIONAL', obs: 'OBSERVATIONAL', expa: 'EXPANDED_ACCESS' };
         if (state.t_phase) {

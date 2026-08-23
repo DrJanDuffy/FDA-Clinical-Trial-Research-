@@ -107,7 +107,8 @@ TS.util = (function () {
   function getJSON(url, opts) {
     opts = opts || {};
     var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
-    var timer = ctrl ? setTimeout(function () { ctrl.abort(); }, opts.timeout || 25000) : null;
+    var timedOut = false;
+    var timer = ctrl ? setTimeout(function () { timedOut = true; ctrl.abort(); }, opts.timeout || 25000) : null;
     if (opts.signal && ctrl) {
       opts.signal.addEventListener('abort', function () { ctrl.abort(); });
     }
@@ -127,9 +128,13 @@ TS.util = (function () {
       return res.json();
     }, function (err) {
       if (timer) clearTimeout(timer);
-      if (err && err.name === 'AbortError') throw err;
+      if (err && err.name === 'AbortError') {
+        // A caller-cancelled request is not a failure — only a timeout is.
+        if (!timedOut) throw err;
+        throw new HttpError(0, 'The data source did not respond in time; it may be under heavy load.');
+      }
       // fetch() rejects on network failure / DNS / blocked request
-      throw new HttpError(0, 'Could not reach the data source. Check your connection and try again.');
+      throw new HttpError(0, 'The data source could not be reached — this is usually a dropped connection, an offline network, or a browser extension blocking the request.');
     });
   }
 

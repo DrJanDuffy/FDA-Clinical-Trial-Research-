@@ -34,8 +34,7 @@ function fixtureFor(url) {
   return { meta: { results: { total: 0 } }, results: [] };
 }
 
-(async () => {
-  const browser = await chromium.launch(LAUNCH);
+async function runSuite(browser) {
   // axe-core requires an explicit context rather than browser.newPage().
   const context = await browser.newContext({ viewport: { width: 1280, height: 1000 } });
   const page = await context.newPage();
@@ -97,5 +96,19 @@ function fixtureFor(url) {
 
   console.log(`\n${checks - failures}/${checks} page states pass WCAG 2.1 A/AA`);
   if (failures) process.exitCode = 1;
-  await browser.close();
+}
+
+// Anything outside a step() — navigation, routing, fixtures — can still throw.
+// Closing in `finally` means a setup failure reports itself instead of leaving
+// an orphaned browser and an unhandled rejection with no summary.
+(async () => {
+  const browser = await chromium.launch(LAUNCH);
+  try {
+    await runSuite(browser);
+  } catch (e) {
+    console.log('\nSUITE ABORTED — ' + (e && e.message));
+    process.exitCode = 1;
+  } finally {
+    await browser.close();
+  }
 })();

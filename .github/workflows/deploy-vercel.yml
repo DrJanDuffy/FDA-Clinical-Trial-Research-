@@ -10,6 +10,10 @@ on:
 # Secrets: VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID
 # (Skip all this if you link the repo in the Vercel dashboard instead — Vercel
 #  will build it directly from vercel.json and this workflow is unnecessary.)
+# Least privilege: nothing here needs to write to the repository.
+permissions:
+  contents: read
+
 jobs:
   deploy:
     if: vars.ENABLE_VERCEL == 'true'
@@ -19,6 +23,8 @@ jobs:
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
