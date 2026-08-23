@@ -27,7 +27,7 @@
 
   /* Strip characters that would break a Lucene-ish query */
   function safeTerm(s) {
-    return U.clean(s).replace(/["\\(){}\[\]^~:]/g, ' ').replace(/\s+/g, ' ').trim();
+    return U.clean(s).replace(/["\\(){}[\]^~:]/g, ' ').replace(/\s+/g, ' ').trim();
   }
 
   /* ============================================================
@@ -36,6 +36,10 @@
      ============================================================ */
   var CTG_BASE = 'https://clinicaltrials.gov/api/v2/studies';
 
+  // All 14 values of the Status enum, as published by /api/v2/studies/enums.
+  // The last five are expanded-access statuses, which the Study type filter
+  // can surface. Labels are the registry's own wording rather than a
+  // prettified version of the enum key, so a card reads the way the source does.
   var STATUS_TONE = {
     RECRUITING: 'ok',
     NOT_YET_RECRUITING: 'info',
@@ -45,7 +49,29 @@
     TERMINATED: 'danger',
     WITHDRAWN: 'danger',
     SUSPENDED: 'warn',
-    UNKNOWN: 'warn'
+    UNKNOWN: 'warn',
+    AVAILABLE: 'ok',
+    APPROVED_FOR_MARKETING: 'ok',
+    TEMPORARILY_NOT_AVAILABLE: 'warn',
+    WITHHELD: 'warn',
+    NO_LONGER_AVAILABLE: 'danger'
+  };
+
+  var STATUS_LABEL = {
+    ACTIVE_NOT_RECRUITING: 'Active, not recruiting',
+    COMPLETED: 'Completed',
+    ENROLLING_BY_INVITATION: 'Enrolling by invitation',
+    NOT_YET_RECRUITING: 'Not yet recruiting',
+    RECRUITING: 'Recruiting',
+    SUSPENDED: 'Suspended',
+    TERMINATED: 'Terminated',
+    WITHDRAWN: 'Withdrawn',
+    AVAILABLE: 'Available',
+    NO_LONGER_AVAILABLE: 'No longer available',
+    TEMPORARILY_NOT_AVAILABLE: 'Temporarily not available',
+    APPROVED_FOR_MARKETING: 'Approved for marketing',
+    WITHHELD: 'Withheld',
+    UNKNOWN: 'Unknown status'
   };
 
   function phaseLabel(phases) {
@@ -107,7 +133,7 @@
     }
 
     var badges = [];
-    if (status) badges.push({ t: U.titleCase(status), tone: STATUS_TONE[status] === undefined ? '' : STATUS_TONE[status] });
+    if (status) badges.push({ t: STATUS_LABEL[status] || U.titleCase(status), tone: STATUS_TONE[status] === undefined ? '' : STATUS_TONE[status] });
     if (phase) badges.push({ t: phase, tone: 'accent' });
     if (dsg.studyType) badges.push({ t: U.titleCase(dsg.studyType), tone: '' });
 
@@ -149,7 +175,7 @@
       // aggFilters is the one parameter likely to be rejected — drop it and
       // fall back to filtering phase/type on the client so search still works.
       if (err.status === 400 && params.aggFilters) {
-        var fallback = {};
+        const fallback = {};
         Object.keys(params).forEach(function (k) { if (k !== 'aggFilters') fallback[k] = params[k]; });
         fallback.__clientFilter = true;
         return run(fallback).then(function (data) { data.__clientFilter = true; return data; });
@@ -159,8 +185,8 @@
       var studies = data.studies || [];
 
       if (data.__clientFilter) {
-        var phaseMap = { '0': 'EARLY_PHASE1', '1': 'PHASE1', '2': 'PHASE2', '3': 'PHASE3', '4': 'PHASE4' };
-        var typeMap = { int: 'INTERVENTIONAL', obs: 'OBSERVATIONAL', expa: 'EXPANDED_ACCESS' };
+        const phaseMap = { '0': 'EARLY_PHASE1', '1': 'PHASE1', '2': 'PHASE2', '3': 'PHASE3', '4': 'PHASE4' };
+        const typeMap = { int: 'INTERVENTIONAL', obs: 'OBSERVATIONAL', expa: 'EXPANDED_ACCESS' };
         if (state.t_phase) {
           studies = studies.filter(function (s) {
             var ph = ((s.protocolSection || {}).designModule || {}).phases || [];
@@ -194,9 +220,9 @@
     parts.push(term ? '(' + term + ')' : '(clinical trial)');
 
     if (state.r_since && state.r_since !== '0') {
-      var from = new Date();
+      const from = new Date();
       from.setFullYear(from.getFullYear() - parseInt(state.r_since, 10));
-      var to = new Date();
+      const to = new Date();
       to.setFullYear(to.getFullYear() + 1);
       parts.push('(FIRST_PDATE:[' + iso(from) + ' TO ' + iso(to) + '])');
     }
@@ -248,7 +274,8 @@
       csv: {
         source: 'Europe PMC', title: U.clean(r.title), identifier: r.pmid || doi || r.id || '',
         date: date, status: r.source === 'PPR' ? 'preprint' : 'published',
-        organisation: journal, url: url, summary: U.truncate(r.abstractText, 400)
+        organisation: journal, url: url, summary: U.truncate(r.abstractText, 400),
+        authors: U.clean(r.authorString)
       }
     });
   }
@@ -424,7 +451,7 @@
 
       var items = results.map(function (r) {
         if (is510k) {
-          var k = r.k_number || '';
+          const k = r.k_number || '';
           return item({
             key: 'fda-510k:' + k,
             source: 'approvals',
@@ -556,6 +583,25 @@
     });
   }
 
+  /* ============================================================
+     Data freshness — ClinicalTrials.gov /version
+
+     The registry reloads Monday-Friday, generally by 14:00 UTC. The API docs
+     recommend reading dataTimestamp to confirm the refresh actually landed
+     before trusting a result set as current, so we surface it to the reader
+     rather than implying the data is live to the second.
+     ============================================================ */
+  function dataFreshness(signal) {
+    return U.getJSON('https://clinicaltrials.gov/api/v2/version', { signal: signal, timeout: 8000 })
+      .then(function (v) {
+        return {
+          apiVersion: v.apiVersion || '',
+          timestamp: v.dataTimestamp || '',
+          label: v.dataTimestamp ? U.fmtDate(v.dataTimestamp) : ''
+        };
+      });
+  }
+
   /* ============================================================ */
   TS.sources = {
     trials: { label: 'Clinical trials', search: ctgSearch },
@@ -563,4 +609,5 @@
     approvals: { label: 'FDA approvals', search: approvalsSearch },
     safety: { label: 'Safety & recalls', search: safetySearch }
   };
+  TS.dataFreshness = dataFreshness;
 })();

@@ -27,9 +27,9 @@
   function safeURL(u) {
     if (!u) return '';
     try {
-      var parsed = new URL(u, location.href);
+      const parsed = new URL(u, location.href);
       return /^https?:$/.test(parsed.protocol) ? parsed.href : '';
-    } catch (e) { return ''; }
+    } catch { return ''; }
   }
 
   /* ---------- one result card ---------- */
@@ -80,9 +80,9 @@
     if (it.summary) {
       node.appendChild(el('p', { class: 'card-summary', text: it.summary }));
       if (it.summary.length > 260) {
-        var toggle = el('button', { type: 'button', class: 'more-link', text: 'Show more' });
+        const toggle = el('button', { type: 'button', class: 'more-link', text: 'Show more' });
         toggle.addEventListener('click', function () {
-          var open = node.classList.toggle('is-open');
+          const open = node.classList.toggle('is-open');
           toggle.textContent = open ? 'Show less' : 'Show more';
         });
         node.appendChild(toggle);
@@ -90,7 +90,7 @@
     }
 
     if (it.meta.length) {
-      var bits = [];
+      const bits = [];
       it.meta.forEach(function (m) {
         var span = el('span');
         if (m[0]) span.appendChild(el('b', { text: m[0] + ': ' }));
@@ -106,7 +106,7 @@
   /* ---------- states ---------- */
   function skeletons(n) {
     var frag = document.createDocumentFragment();
-    for (var i = 0; i < (n || 4); i++) {
+    for (let i = 0; i < (n || 4); i++) {
       frag.appendChild(el('div', { class: 'skeleton' }, [
         el('div', { class: 'sk-line', style: 'width:62%;height:14px' }),
         el('div', { class: 'sk-line', style: 'width:96%' }),
@@ -123,7 +123,7 @@
       el('p', { text: body })
     ]);
     if (action) {
-      var b = el('button', { type: 'button', class: 'btn btn-outline', text: action.label });
+      const b = el('button', { type: 'button', class: 'btn btn-outline', text: action.label });
       b.addEventListener('click', action.onClick);
       node.appendChild(b);
     }

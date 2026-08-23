@@ -101,10 +101,12 @@
   function setBusy(on) { dom.results.setAttribute('aria-busy', on ? 'true' : 'false'); }
 
   function clearResults() {
+    if (dom.intro) dom.intro.hidden = true;
     dom.body.innerHTML = '';
     dom.head.hidden = true;
     dom.more.hidden = true;
     dom.csv.hidden = true;
+    dom.ris.hidden = true;
   }
 
   function showCount(text) {
@@ -180,6 +182,7 @@
         ' ' + U.pluralise(typeof total === 'number' ? total : shown, 'result') + ' from ' + escapeHTML(res.items[0].sourceLabel)
       );
       dom.csv.hidden = false;
+      dom.ris.hidden = false;
       dom.more.hidden = !res.next;
     }).catch(function (err) {
       if (gen !== generation) return;
@@ -207,7 +210,10 @@
     clearResults();
 
     if (!s.q) {
-      dom.body.appendChild(introPanel());
+      // The intro lives in index.html so the page renders complete on first
+      // paint — building it here caused a large layout shift as the footer
+      // was pushed down (Lighthouse CLS 0.34).
+      if (dom.intro) dom.intro.hidden = false;
       return;
     }
 
@@ -264,36 +270,6 @@
     });
   }
 
-  function introPanel() {
-    var wrap = document.createDocumentFragment();
-
-    wrap.appendChild(el('div', { class: 'hero-note' }, [
-      el('h2', { text: 'Search four official medical databases at once' }),
-      el('p', {
-        text: 'Type a condition, a drug, or a research topic above. TrialScope queries ClinicalTrials.gov, ' +
-              'Europe PMC, and two openFDA endpoints live from your browser — no account, no tracking, and ' +
-              'every result links back to the original record.'
-      }),
-      el('div', { class: 'hero-cards' }, [
-        heroCard('Clinical trials', 'Studies you may be able to join, with status, phase, sponsor and sites.', 'trials'),
-        heroCard('Research papers', 'Peer-reviewed literature and preprints, with abstracts and free-text links.', 'research'),
-        heroCard('FDA approvals', 'New drug, biologic and medical-device decisions as the FDA publishes them.', 'approvals'),
-        heroCard('Safety & recalls', 'Recall notices graded by how much harm the product could cause.', 'safety')
-      ])
-    ]));
-
-    return wrap;
-  }
-
-  function heroCard(title, desc, tab) {
-    var b = el('button', { type: 'button', class: 'hero-card' }, [
-      el('strong', { text: title }),
-      el('span', { text: desc })
-    ]);
-    b.addEventListener('click', function () { switchTab(tab); });
-    return b;
-  }
-
   /* ============================================================
      saved tab
      ============================================================ */
@@ -311,9 +287,13 @@
 
     showCount('<strong>' + U.number(saved.length) + '</strong> saved ' + U.pluralise(saved.length, 'item'));
     dom.csv.hidden = false;
+    dom.ris.hidden = false;
 
     var groups = {};
-    saved.forEach(function (it) { (groups[it.source] = groups[it.source] || []).push(it); });
+    saved.forEach(function (it) {
+      if (!groups[it.source]) groups[it.source] = [];
+      groups[it.source].push(it);
+    });
 
     ['trials', 'research', 'approvals', 'safety'].forEach(function (name) {
       if (!groups[name]) return;
@@ -366,9 +346,9 @@
   function init() {
     dom = {
       q: $('#q'), form: $('#searchForm'), clearQ: $('#clearQ'),
-      results: $('#results'), body: $('#resultsBody'),
+      results: $('#results'), body: $('#resultsBody'), intro: $('#intro'),
       head: $('#resultsHead'), count: $('#resultsCount'),
-      more: $('#moreBtn'), csv: $('#csvBtn'),
+      more: $('#moreBtn'), csv: $('#csvBtn'), ris: $('#risBtn'),
       watchCount: $('#watchCount'), watchBtn: $('#watchlistBtn'),
       themeBtn: $('#themeBtn')
     };
@@ -419,6 +399,10 @@
       });
     });
 
+    $$('.hero-card[data-goto]').forEach(function (c) {
+      c.addEventListener('click', function () { switchTab(c.dataset.goto); });
+    });
+
     $$('.chip[data-q]').forEach(function (c) {
       c.addEventListener('click', function () {
         dom.q.value = c.dataset.q;
@@ -439,12 +423,15 @@
 
     dom.more.addEventListener('click', function () { runSearch(current.tab, { more: true }); });
 
-    dom.csv.addEventListener('click', function () {
-      var csv = U.toCSV(current.items);
-      if (!csv) return;
+    function exportAs(kind) {
+      var body = kind === 'ris' ? U.toRIS(current.items) : U.toCSV(current.items);
+      if (!body) return;
       var q = (dom.q.value.trim() || current.tab).replace(/[^a-z0-9]+/gi, '-').toLowerCase();
-      U.download('trialscope-' + current.tab + '-' + q + '-' + U.stamp(new Date()) + '.csv', csv);
-    });
+      var name = 'trialscope-' + current.tab + '-' + q + '-' + U.stamp(new Date()) + '.' + kind;
+      U.download(name, body, kind === 'ris' ? 'application/x-research-info-systems' : 'text/csv');
+    }
+    dom.csv.addEventListener('click', function () { exportAs('csv'); });
+    dom.ris.addEventListener('click', function () { exportAs('ris'); });
 
     dom.watchBtn.addEventListener('click', function () { switchTab('watchlist'); });
 
@@ -457,6 +444,16 @@
         dom.q.blur();
       }
     });
+
+    // Best-effort: if the registry is unreachable the line simply stays empty.
+    if (TS.dataFreshness) {
+      TS.dataFreshness().then(function (f) {
+        var node = $('#freshness');
+        if (!node || !f.label) return;
+        node.textContent = ' · registry data refreshed ' + f.label;
+        node.title = 'ClinicalTrials.gov API ' + f.apiVersion + ', dataTimestamp ' + f.timestamp;
+      }).catch(function () { /* freshness is a nicety, never an error */ });
+    }
 
     var startTab = applyURL();
     dom.clearQ.hidden = !dom.q.value;

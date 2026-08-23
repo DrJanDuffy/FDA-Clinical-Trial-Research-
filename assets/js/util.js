@@ -53,13 +53,16 @@ TS.util = (function () {
   function parseDate(v) {
     if (!v) return null;
     var s = String(v).trim();
-    var m;
-    if ((m = s.match(/^(\d{4})(\d{2})(\d{2})$/))) return new Date(+m[1], +m[2] - 1, +m[3]);
-    if ((m = s.match(/^(\d{4})-(\d{2})-(\d{2})/))) return new Date(+m[1], +m[2] - 1, +m[3]);
-    if ((m = s.match(/^(\d{4})-(\d{2})$/))) return new Date(+m[1], +m[2] - 1, 1);
-    if ((m = s.match(/^(\d{4})$/))) return new Date(+m[1], 0, 1);
+    var m = s.match(/^(\d{4})(\d{2})(\d{2})$/);
+    if (m) return new Date(+m[1], +m[2] - 1, +m[3]);
+    m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (m) return new Date(+m[1], +m[2] - 1, +m[3]);
+    m = s.match(/^(\d{4})-(\d{2})$/);
+    if (m) return new Date(+m[1], +m[2] - 1, 1);
+    m = s.match(/^(\d{4})$/);
+    if (m) return new Date(+m[1], 0, 1);
     var d = new Date(s);
-    return isNaN(d.getTime()) ? null : d;
+    return Number.isNaN(d.getTime()) ? null : d;
   }
 
   function fmtDate(v) {
@@ -117,7 +120,7 @@ TS.util = (function () {
       if (!res.ok) {
         return res.text().then(function (body) {
           var msg = '';
-          try { msg = (JSON.parse(body).error || {}).message || ''; } catch (e) { /* not json */ }
+          try { msg = (JSON.parse(body).error || {}).message || ''; } catch { /* body wasn't JSON */ }
           throw new HttpError(res.status, msg);
         });
       }
@@ -182,8 +185,39 @@ TS.util = (function () {
     return out.join('\r\n');
   }
 
-  function download(filename, text, mime) {
-    var blob = new Blob(['﻿' + text], { type: (mime || 'text/csv') + ';charset=utf-8' });
+  // RIS is the citation interchange format Zotero, EndNote and Mendeley import.
+  // ClinicalTrials.gov offers it for its own downloads, so researchers can pull
+  // trials and papers found here straight into a reference manager.
+  function toRIS(rows) {
+    var out = [];
+    (rows || []).forEach(function (r) {
+      var c = r.csv || {};
+      var isPaper = r.source === 'research';
+      var d = parseDate(c.date);
+      var tag = function (k, v) { if (v) out.push(k + '  - ' + String(v).replace(/\r?\n/g, ' ')); };
+
+      out.push('TY  - ' + (isPaper ? 'JOUR' : 'GEN'));
+      tag('TI', c.title);
+      (c.authors ? String(c.authors).split(/,\s*/) : []).forEach(function (a) { tag('AU', a); });
+      if (isPaper) tag('JO', c.organisation); else tag('PB', c.organisation);
+      if (d) {
+        tag('PY', d.getFullYear());
+        tag('DA', d.getFullYear() + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + String(d.getDate()).padStart(2, '0'));
+      }
+      tag('AB', c.summary);
+      tag('ID', c.identifier);
+      tag('UR', c.url);
+      tag('DB', c.source);
+      out.push('ER  - ');
+      out.push('');
+    });
+    return out.join('\r\n');
+  }
+
+  // Excel only reads UTF-8 CSV correctly when the file starts with a byte-order
+  // mark, but a BOM confuses some reference-manager RIS parsers, so it is opt-in.
+  function download(filename, text, mime, bom) {
+    var blob = new Blob([(bom ? '\ufeff' : '') + text], { type: (mime || 'text/csv') + ';charset=utf-8' });
     var url = URL.createObjectURL(blob);
     var a = document.createElement('a');
     a.href = url;
@@ -198,12 +232,12 @@ TS.util = (function () {
   function store(key, value) {
     try {
       if (value === undefined) {
-        var raw = localStorage.getItem(key);
+        const raw = localStorage.getItem(key);
         return raw ? JSON.parse(raw) : null;
       }
       localStorage.setItem(key, JSON.stringify(value));
       return value;
-    } catch (e) { return value === undefined ? null : value; }
+    } catch { return value === undefined ? null : value; }
   }
 
   return {
@@ -213,6 +247,6 @@ TS.util = (function () {
     monthsAgoStamp: monthsAgoStamp, stamp: stamp,
     getJSON: getJSON, qs: qs, HttpError: HttpError,
     debounce: debounce, pluralise: pluralise, number: number, uniq: uniq,
-    toCSV: toCSV, download: download, store: store
+    toCSV: toCSV, toRIS: toRIS, download: download, store: store
   };
 })();

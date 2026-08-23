@@ -11,7 +11,7 @@
  */
 const { chromium } = require('playwright');
 const F = require('./fixtures.js');
-const path = require('path');
+const path = require('node:path');
 
 // The site is a plain static page, so the suite drives it straight off the filesystem.
 const SITE = 'file://' + path.resolve(__dirname, '..', 'index.html');
@@ -102,7 +102,7 @@ const seenUrls = [];
   await step('NCT id + recruiting badge', async () => {
     const html = await page.innerHTML('#resultsBody');
     if (!html.includes('NCT05012345')) throw new Error('no NCT id');
-    if (!/badge ok">Recruiting/.test(html)) throw new Error('no recruiting badge');
+    if (!/badge ok">Recruiting</.test(html)) throw new Error('no recruiting badge');
     if (!/Phase 2/.test(html)) throw new Error('no phase badge');
   });
   await step('terminated study gets danger badge', async () => {
@@ -235,10 +235,38 @@ const seenUrls = [];
   const dl = await Promise.all([
     page.waitForEvent('download', { timeout: 4000 }),
     page.click('#csvBtn')
-  ]).then(r => r[0]).catch(e => null);
+  ]).then(r => r[0]).catch(() => null);
   await step('csv download fires with a sane filename', async () => {
     if (!dl) throw new Error('no download event');
     if (!/^trialscope-watchlist-.*\.csv$/.test(dl.suggestedFilename())) throw new Error(dl.suggestedFilename());
+  });
+
+  console.log('\n[9b] RIS citation export');
+  await page.click('.tab[data-tab=research]');
+  await page.waitForTimeout(700);
+  const risDl = await Promise.all([
+    page.waitForEvent('download', { timeout: 4000 }),
+    page.click('#risBtn')
+  ]).then(r => r[0]).catch(() => null);
+  await step('RIS download fires', async () => {
+    if (!risDl) throw new Error('no download event');
+    if (!/\.ris$/.test(risDl.suggestedFilename())) throw new Error(risDl.suggestedFilename());
+  });
+  await step('RIS body is a valid, importable record', async () => {
+    const fs = require('node:fs');
+    const p = await risDl.path();
+    const text = fs.readFileSync(p, 'utf8');
+    // A reference manager needs a type first, a terminator last, and real fields between.
+    if (!/^\uFEFF?TY {2}- JOUR/m.test(text)) throw new Error('missing JOUR type: ' + text.slice(0, 80));
+    if (!/^ER {2}- *$/m.test(text)) throw new Error('missing ER terminator');
+    if (!/^TI {2}- Randomized Trial of Semaglutide/m.test(text)) throw new Error('missing title');
+    if (!/^AU {2}- Kosiborod MN/m.test(text)) throw new Error('missing author');
+    if (!/^JO {2}- The New England Journal of Medicine/m.test(text)) throw new Error('missing journal');
+    if (!/^PY {2}- 2026/m.test(text)) throw new Error('missing year');
+    if (!/^UR {2}- https:\/\/doi\.org\//m.test(text)) throw new Error('missing URL');
+    const records = (text.match(/^TY {2}- /gm) || []).length;
+    const enders  = (text.match(/^ER {2}- *$/gm) || []).length;
+    if (records !== enders) throw new Error(`${records} records but ${enders} terminators`);
   });
 
   console.log('\n[10] Error handling');
@@ -322,7 +350,8 @@ const seenUrls = [];
     if (await page.getAttribute('#results', 'aria-labelledby') !== 'tab-trials') throw new Error('wrong label');
   });
   await step('"/" focuses the search box', async () => {
-    await page.click('h2, .card-title');
+    // Move focus out of any field first; the shortcut must not fire while typing.
+    await page.evaluate(() => document.activeElement && document.activeElement.blur());
     await page.keyboard.press('/');
     await page.waitForTimeout(120);
     if (await page.evaluate(() => document.activeElement.id) !== 'q') throw new Error('did not focus search');

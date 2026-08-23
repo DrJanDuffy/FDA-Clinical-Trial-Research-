@@ -27,7 +27,7 @@
       </span>
     </div>
     <div class="header-actions">
-      <button type="button" class="btn btn-ghost" id="watchlistBtn" aria-label="Open watchlist">
+      <button type="button" class="btn btn-ghost" id="watchlistBtn" title="Show saved results">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
         Saved <span class="pill" id="watchCount">0</span>
       </button>
@@ -197,11 +197,43 @@
 
   <!-- ============ RESULTS ============ -->
   <section id="results" class="results" role="tabpanel" aria-labelledby="tab-overview" aria-live="polite" aria-busy="false">
+    <div class="hero-note" id="intro">
+      <h2>Search four official medical databases at once</h2>
+      <p>
+        Type a condition, a drug, or a research topic above. TrialScope queries
+        ClinicalTrials.gov, Europe PMC, and two openFDA endpoints live from your browser —
+        no account, no tracking, and every result links back to the original record.
+      </p>
+      <div class="hero-cards">
+        <button type="button" class="hero-card" data-goto="trials">
+          <strong>Clinical trials</strong>
+          <span>Studies you may be able to join, with status, phase, sponsor and sites.</span>
+        </button>
+        <button type="button" class="hero-card" data-goto="research">
+          <strong>Research papers</strong>
+          <span>Peer-reviewed literature and preprints, with abstracts and free-text links.</span>
+        </button>
+        <button type="button" class="hero-card" data-goto="approvals">
+          <strong>FDA approvals</strong>
+          <span>New drug, biologic and medical-device decisions as the FDA publishes them.</span>
+        </button>
+        <button type="button" class="hero-card" data-goto="safety">
+          <strong>Safety &amp; recalls</strong>
+          <span>Recall notices graded by how much harm the product could cause.</span>
+        </button>
+      </div>
+    </div>
+
     <div id="resultsHead" class="results-head" hidden>
       <p class="results-count" id="resultsCount"></p>
       <button type="button" class="btn btn-ghost btn-sm" id="csvBtn" hidden>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
         Export CSV
+      </button>
+      <button type="button" class="btn btn-ghost btn-sm" id="risBtn" hidden
+              title="Citation file for Zotero, EndNote or Mendeley">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        Export RIS
       </button>
     </div>
     <div id="resultsBody"></div>
@@ -219,10 +251,19 @@
         <h3>Where this data comes from</h3>
         <p>Every result is fetched live, in your browser, straight from the official source. Nothing is cached, re-hosted or edited.</p>
         <ul class="src-list">
-          <li><a href="https://clinicaltrials.gov/" rel="noopener">ClinicalTrials.gov</a> — U.S. NIH registry of clinical studies (API v2)</li>
+          <li>
+            <a href="https://clinicaltrials.gov/" rel="noopener">ClinicalTrials.gov</a> — U.S. NIH registry of clinical studies (API v2)
+            <span id="freshness" class="freshness"></span>
+          </li>
           <li><a href="https://europepmc.org/" rel="noopener">Europe PMC</a> — indexes PubMed/MEDLINE, PMC and preprint servers</li>
           <li><a href="https://open.fda.gov/" rel="noopener">openFDA</a> — Drugs@FDA, device PMA &amp; 510(k), enforcement reports</li>
         </ul>
+        <p class="terms">
+          Use of this data is subject to each provider's terms —
+          <a href="https://clinicaltrials.gov/about-site/terms-conditions" rel="noopener">ClinicalTrials.gov</a>,
+          <a href="https://europepmc.org/Copyright" rel="noopener">Europe PMC</a> and
+          <a href="https://open.fda.gov/terms/" rel="noopener">openFDA</a>.
+        </p>
       </div>
       <div>
         <h3>Important</h3>

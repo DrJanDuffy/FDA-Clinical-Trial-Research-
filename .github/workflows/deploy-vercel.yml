@@ -1,0 +1,34 @@
+name: Deploy — Vercel
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Enable:  repository variable ENABLE_VERCEL = true
+# Secrets: VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID
+# (Skip all this if you link the repo in the Vercel dashboard instead — Vercel
+#  will build it directly from vercel.json and this workflow is unnecessary.)
+jobs:
+  deploy:
+    if: vars.ENABLE_VERCEL == 'true'
+    runs-on: ubuntu-latest
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Deploy
+        run: |
+          if [ "${{ github.ref_name }}" = "main" ] && [ "${{ github.event_name }}" = "push" ]; then
+            npx --yes vercel@latest deploy dist --prod --yes --token="${{ secrets.VERCEL_TOKEN }}"
+          else
+            npx --yes vercel@latest deploy dist --yes --token="${{ secrets.VERCEL_TOKEN }}"
+          fi

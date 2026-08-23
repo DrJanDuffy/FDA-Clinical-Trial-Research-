@@ -1,0 +1,20 @@
+#!/bin/sh
+# Blocks a commit that would fail CI. Enabled by `npm install` (see the
+# "prepare" script), or manually with: git config core.hooksPath .githooks
+set -e
+
+if [ ! -d node_modules/@biomejs ]; then
+  echo "pre-commit: biome not installed, skipping lint (run 'npm install')"
+  exit 0
+fi
+
+echo "pre-commit: checking staged JavaScript…"
+staged=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(js|json)$' || true)
+[ -z "$staged" ] && exit 0
+
+# shellcheck disable=SC2086
+npx biome lint $staged || {
+  echo
+  echo "pre-commit: blocked. Fix the issues above, or run 'npm run lint:fix'."
+  exit 1
+}
