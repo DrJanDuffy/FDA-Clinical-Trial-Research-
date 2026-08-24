@@ -69,7 +69,7 @@ jobs:
       - run: npm ci
       - run: npm run build
       # Audits dist/ via LHCI's own static server — no deploy needed.
-      - uses: treosh/lighthouse-ci-action@v12
+      - uses: treosh/lighthouse-ci-action@512cc908a55bfb0ad231facca52adf3d3a651df4 # v12
         with:
           configPath: ./lighthouserc.json
           uploadArtifacts: true
@@ -82,7 +82,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - uses: lycheeverse/lychee-action@v2
+      - uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8 # v2.9.0
         with:
           args: >-
             --no-progress
