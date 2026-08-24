@@ -59,16 +59,27 @@ one can never fail CI:
 | Target | Turn it on | Also needs |
 | --- | --- | --- |
 | GitHub Pages | on by default (`ENABLE_GITHUB_PAGES=false` to disable) | Settings → Pages → Source → **GitHub Actions** |
-| Cloudflare Pages | repo variable `ENABLE_CLOUDFLARE_PAGES=true` | secrets `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` |
+| Cloudflare Workers | repo variable `ENABLE_CLOUDFLARE_WORKERS=true` | secrets `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` |
 | Vercel | repo variable `ENABLE_VERCEL=true` | secrets `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` |
 
 Repository variables live under **Settings → Secrets and variables → Actions →
 Variables**. If you would rather let Vercel build from its own dashboard, link the
 repo there and delete `deploy-vercel.yml` — `vercel.json` already describes the build.
 
-Cloudflare Pages reads `_headers` and Vercel reads `vercel.json`; both apply the
+Cloudflare reads `_headers` and Vercel reads `vercel.json`; both apply the
 same Content-Security-Policy, which allow-lists exactly the three API origins the
 site talks to.
+
+The Cloudflare target uses [Workers Static Assets][wsa] rather than Pages, which
+Cloudflare has put into maintenance mode. `wrangler.jsonc` holds the whole
+configuration — a name, a compatibility date and `dist/` as the asset directory —
+and there is no Worker script, so Cloudflare serves the files directly. Pushes to
+`main` run `wrangler deploy`; pull requests run `wrangler versions upload`, which
+publishes a preview URL without moving live traffic. Set repo variable
+`CLOUDFLARE_WORKER_NAME` to deploy under a name other than `trialscope`, and run
+`npx wrangler dev` to preview the built site locally.
+
+[wsa]: https://developers.cloudflare.com/workers/static-assets/
 
 ### Ops notifications
 

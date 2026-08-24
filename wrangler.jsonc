@@ -1,0 +1,23 @@
+/**
+ * Cloudflare Workers Static Assets.
+ *
+ * Cloudflare put Pages into maintenance mode and now points new projects at
+ * Workers, which reads the same `_headers` file and adds Workers Logs on top.
+ * No `main` entry point: the site is static, so Cloudflare serves `dist/`
+ * directly and no Worker script runs.
+ *
+ * Local preview:  npx wrangler dev
+ * Deploy:         npx wrangler deploy   (CI does this — see deploy-cloudflare.yml)
+ */
+{
+  "name": "trialscope",
+  "compatibility_date": "2026-08-24",
+  "assets": {
+    "directory": "./dist"
+  },
+  // Every uploaded version gets its own URL, which is what pull requests preview.
+  "preview_urls": true,
+  "observability": {
+    "enabled": true
+  }
+}

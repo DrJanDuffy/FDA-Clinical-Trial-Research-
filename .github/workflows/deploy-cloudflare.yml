@@ -1,4 +1,4 @@
-name: Deploy — Cloudflare Pages
+name: Deploy — Cloudflare Workers
 
 on:
   push:
@@ -7,20 +7,25 @@ on:
   workflow_dispatch:
 
 # Disabled until you opt in, so an unconfigured account never fails CI.
-# Enable:  repository variable ENABLE_CLOUDFLARE_PAGES = true
-# Secrets: CLOUDFLARE_API_TOKEN (Cloudflare Pages:Edit), CLOUDFLARE_ACCOUNT_ID
-# Variable CLOUDFLARE_PROJECT_NAME overrides the default project name.
+# Enable:  repository variable ENABLE_CLOUDFLARE_WORKERS = true
+# Secrets: CLOUDFLARE_API_TOKEN (Workers Scripts:Edit), CLOUDFLARE_ACCOUNT_ID
+# Variable CLOUDFLARE_WORKER_NAME overrides the name in wrangler.jsonc, which
+# matters on an account that already hosts other Workers.
 # Least privilege: nothing here needs to write to the repository.
 permissions:
   contents: read
 
+concurrency:
+  group: cloudflare-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
 jobs:
   deploy:
-    if: vars.ENABLE_CLOUDFLARE_PAGES == 'true'
+    # Fork pull requests cannot read secrets, so skip them rather than fail.
+    if: >-
+      vars.ENABLE_CLOUDFLARE_WORKERS == 'true' &&
+      github.event.pull_request.head.repo.fork != true
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      deployments: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -31,11 +36,22 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
-      - uses: cloudflare/wrangler-action@v3
+
+      # main (and manual runs) promote the new version to the live deployment.
+      - name: Deploy
+        if: github.event_name != 'pull_request'
+        uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: >-
-            pages deploy dist
-            --project-name=${{ vars.CLOUDFLARE_PROJECT_NAME || 'trialscope' }}
-            --branch=${{ github.head_ref || github.ref_name }}
+          command: deploy ${{ vars.CLOUDFLARE_WORKER_NAME && format('--name={0}', vars.CLOUDFLARE_WORKER_NAME) || '' }}
+
+      # Pull requests only upload a version. It gets its own preview URL, printed
+      # in the step log, and live traffic keeps going to the current deployment.
+      - name: Upload preview version
+        if: github.event_name == 'pull_request'
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: versions upload ${{ vars.CLOUDFLARE_WORKER_NAME && format('--name={0}', vars.CLOUDFLARE_WORKER_NAME) || '' }}
