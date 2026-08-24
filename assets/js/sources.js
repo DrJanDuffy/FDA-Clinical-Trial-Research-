@@ -228,7 +228,15 @@
     // two-concept searches ("CAR-T lymphoma" drops from thousands of hits to
     // 25). Asking for the phrase OR the loose form keeps the recall while
     // relevance ranking floats true phrase matches to the top.
+    //
+    // That protection only exists while relevance is doing the sorting. Europe
+    // PMC matches full text, so under an explicit sort a hugely-cited review
+    // that mentions the phrase once outranks papers actually about it —
+    // "hair loss" by citations returned Long COVID and JAK/STAT reviews. For
+    // those, scope the match to title, abstract and keywords, which means the
+    // paper is about the topic rather than merely mentioning it.
     if (!term) parts.push('(clinical trial)');
+    else if (state.r_sort) parts.push('(TITLE:"' + term + '" OR ABSTRACT:"' + term + '" OR KW:"' + term + '")');
     else if (/\s/.test(term)) parts.push('("' + term + '" OR (' + term + '))');
     else parts.push('(' + term + ')');
 
