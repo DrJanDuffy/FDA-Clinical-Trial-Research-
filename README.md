@@ -96,7 +96,7 @@ npm install
 npx playwright install chromium
 
 npm run lint        # Biome
-npm test            # smoke suite (41 assertions)
+npm test            # smoke suite (offline, fixture-backed)
 npm run test:a11y   # axe-core, WCAG 2.1 A/AA
 npm run lighthouse  # performance / SEO budgets
 npm run test:all    # lint + smoke + a11y
@@ -142,7 +142,9 @@ assets/js/app.js         tabs, URL state, searching, saved items
 scripts/build.js         copies the publishable site into dist/
 tests/smoke.test.js      offline end-to-end suite
 tests/a11y.test.js       axe-core accessibility suite
-_headers / vercel.json   security headers (CSP, nosniff, frame-ancestors)
+_headers                 security headers (CSP, nosniff, frame-ancestors)
+wrangler.jsonc           Cloudflare Workers Static Assets config
+vercel.json              Vercel build settings and the same headers
 ```
 
 Each adapter in `sources.js` exposes `search(state, cursor)` and returns
