@@ -173,6 +173,32 @@ async function runSuite(browser) {
     if (!/"hair\+?\s?loss"/.test(u.replace(/\+/g, ' '))) throw new Error('phrase not quoted: ' + u);
     if (!/OR/.test(u)) throw new Error('loose fallback missing: ' + u);
   });
+  await step('sorting by citations scopes to title/abstract/keywords', async () => {
+    // Regression guard: under an explicit sort, a full-text match let
+    // hugely-cited unrelated reviews outrank papers about the topic.
+    await page.fill('#q', 'hair loss');
+    await page.selectOption('#r_sort', 'CITED desc');
+    await page.waitForTimeout(700);
+    seenUrls.length = 0;
+    await page.selectOption('#r_sort', 'CITED desc');
+    await page.click('#searchForm button[type=submit]');
+    await page.waitForTimeout(700);
+    const u = decodeURIComponent(seenUrls.find(x => x.includes('europepmc')) || '').replace(/\+/g, ' ');
+    if (!/TITLE:"hair loss"/.test(u)) throw new Error('not scoped to TITLE: ' + u);
+    if (!/ABSTRACT:"hair loss"/.test(u)) throw new Error('not scoped to ABSTRACT: ' + u);
+    if (!/KW:"hair loss"/.test(u)) throw new Error('not scoped to KW: ' + u);
+    if (/OR \(hair loss\)/.test(u)) throw new Error('loose full-text branch still present: ' + u);
+  });
+  await step('relevance sort keeps the broader phrase-or-loose form', async () => {
+    seenUrls.length = 0;
+    await page.selectOption('#r_sort', '');
+    await page.click('#searchForm button[type=submit]');
+    await page.waitForTimeout(700);
+    const u = decodeURIComponent(seenUrls.find(x => x.includes('europepmc')) || '').replace(/\+/g, ' ');
+    if (/TITLE:/.test(u)) throw new Error('should not field-scope under relevance: ' + u);
+    if (!/"hair loss" OR/.test(u)) throw new Error('phrase-or-loose form missing: ' + u);
+  });
+
   await step('single-word query is not quoted', async () => {
     seenUrls.length = 0;
     await page.fill('#q', 'alopecia');
