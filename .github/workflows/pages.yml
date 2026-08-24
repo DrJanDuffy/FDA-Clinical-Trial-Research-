@@ -16,8 +16,10 @@ concurrency:
 
 jobs:
   deploy:
-    # Opt out by setting repository variable ENABLE_GITHUB_PAGES to 'false'.
-    if: vars.ENABLE_GITHUB_PAGES != 'false'
+    # Enable: repository variable ENABLE_GITHUB_PAGES = true, and set
+    # Settings -> Pages -> Source to "GitHub Actions". Both are required:
+    # without the Pages site, configure-pages fails with "Get Pages site failed".
+    if: vars.ENABLE_GITHUB_PAGES == 'true'
     runs-on: ubuntu-latest
     environment:
       name: github-pages

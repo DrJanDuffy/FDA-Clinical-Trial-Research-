@@ -58,7 +58,7 @@ one can never fail CI:
 
 | Target | Turn it on | Also needs |
 | --- | --- | --- |
-| GitHub Pages | on by default (`ENABLE_GITHUB_PAGES=false` to disable) | Settings → Pages → Source → **GitHub Actions** |
+| GitHub Pages | repo variable `ENABLE_GITHUB_PAGES=true` | Settings → Pages → Source → **GitHub Actions** |
 | Cloudflare Workers | repo variable `ENABLE_CLOUDFLARE_WORKERS=true` | secrets `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` |
 | Vercel | repo variable `ENABLE_VERCEL=true` | secrets `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` |
 
