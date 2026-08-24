@@ -40,7 +40,7 @@ jobs:
       # main (and manual runs) promote the new version to the live deployment.
       - name: Deploy
         if: github.event_name != 'pull_request'
-        uses: cloudflare/wrangler-action@v4
+        uses: cloudflare/wrangler-action@ebbaa1584979971c8614a24965b4405ff95890e0 # v4.0.0
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -50,7 +50,7 @@ jobs:
       # in the step log, and live traffic keeps going to the current deployment.
       - name: Upload preview version
         if: github.event_name == 'pull_request'
-        uses: cloudflare/wrangler-action@v4
+        uses: cloudflare/wrangler-action@ebbaa1584979971c8614a24965b4405ff95890e0 # v4.0.0
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
