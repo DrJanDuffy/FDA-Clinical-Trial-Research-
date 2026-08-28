@@ -11,7 +11,7 @@ const path = require('node:path');
 
 const ROOT = path.resolve(__dirname, '..');
 const OUT = path.join(ROOT, 'dist');
-const INCLUDE = ['index.html', 'assets', '.nojekyll', '_headers'];
+const INCLUDE = ['index.html', 'assets', '_headers'];
 
 fs.rmSync(OUT, { recursive: true, force: true });
 fs.mkdirSync(OUT, { recursive: true });
