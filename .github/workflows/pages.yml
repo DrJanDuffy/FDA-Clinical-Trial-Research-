@@ -16,10 +16,12 @@ concurrency:
 
 jobs:
   deploy:
-    # Enable: repository variable ENABLE_GITHUB_PAGES = true, and set
-    # Settings -> Pages -> Source to "GitHub Actions". Both are required:
-    # without the Pages site, configure-pages fails with "Get Pages site failed".
-    if: vars.ENABLE_GITHUB_PAGES == 'true'
+    # On by default; set repository variable ENABLE_GITHUB_PAGES = false to stop
+    # deploying. #7 made this opt-in because the job always died at
+    # configure-pages with "Get Pages site failed" when Settings -> Pages had no
+    # site. `enablement: true` below creates that site through the API instead,
+    # so the failure mode it was guarding against no longer exists.
+    if: vars.ENABLE_GITHUB_PAGES != 'false'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
@@ -33,6 +35,11 @@ jobs:
           node-version: '24'
       - run: node scripts/build.js
       - uses: actions/configure-pages@v6
+        with:
+          # Creates the Pages site if it does not exist, so enabling the site is
+          # not a manual step in repository settings. Needs pages: write, granted
+          # at the workflow level above.
+          enablement: true
       - uses: actions/upload-pages-artifact@v5
         with:
           path: dist
