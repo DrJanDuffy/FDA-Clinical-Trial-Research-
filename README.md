@@ -53,18 +53,23 @@ npm start          # http://localhost:8080
 `npm run build` copies the publishable files into `dist/` — that is what every
 deploy target ships, so `node_modules`, tests and workflows never leave the repo.
 
-Three targets are wired up. GitHub Pages deploys by default and creates its own
-Pages site, so it needs no setup. The two that require credentials stay **off
-until you opt in**, so an unconfigured one can never fail CI:
+Three targets are wired up. Each is **off until you opt in**, so an unconfigured
+one can never fail CI:
 
 | Target | Turn it on | Also needs |
 | --- | --- | --- |
-| GitHub Pages | on by default (`ENABLE_GITHUB_PAGES=false` to disable) | nothing — the workflow creates the Pages site itself |
+| GitHub Pages | repo variable `ENABLE_GITHUB_PAGES=true` | Settings → Pages → Source → **GitHub Actions** (a human step; see note) |
 | Cloudflare Workers | repo variable `ENABLE_CLOUDFLARE_WORKERS=true` | secrets `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` |
 | Vercel | repo variable `ENABLE_VERCEL=true` | secrets `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` |
 
 Repository variables live under **Settings → Secrets and variables → Actions →
-Variables**. If you would rather let Vercel build from its own dashboard, link the
+Variables**.
+
+The Pages source has to be switched by hand. `actions/configure-pages` advertises
+an `enablement: true` input that creates the site over the API, but the default
+`GITHUB_TOKEN` cannot call that endpoint — it fails with *"Create Pages site
+failed: Resource not accessible by integration"* no matter what `permissions:`
+the workflow requests. Enabling Pages needs a repository admin, or a PAT. If you would rather let Vercel build from its own dashboard, link the
 repo there and delete `deploy-vercel.yml` — `vercel.json` already describes the build.
 
 Cloudflare reads `_headers` and Vercel reads `vercel.json`; both apply the
