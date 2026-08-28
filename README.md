@@ -53,37 +53,53 @@ npm start          # http://localhost:8080
 `npm run build` copies the publishable files into `dist/` — that is what every
 deploy target ships, so `node_modules`, tests and workflows never leave the repo.
 
-Three targets are wired up. Each is **off until you opt in**, so an unconfigured
-one can never fail CI:
+**Cloudflare Workers is the deploy target.** Vercel is wired up as an
+alternative. Both are **off until you opt in**, so an unconfigured one can never
+fail CI:
 
 | Target | Turn it on | Also needs |
 | --- | --- | --- |
-| GitHub Pages | repo variable `ENABLE_GITHUB_PAGES=true` | Settings → Pages → Source → **GitHub Actions** (a human step; see note) |
 | Cloudflare Workers | repo variable `ENABLE_CLOUDFLARE_WORKERS=true` | secrets `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` |
 | Vercel | repo variable `ENABLE_VERCEL=true` | secrets `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` |
 
 Repository variables live under **Settings → Secrets and variables → Actions →
-Variables**.
+Variables**; secrets are on the **Secrets** tab beside it.
 
-The Pages source has to be switched by hand. `actions/configure-pages` advertises
-an `enablement: true` input that creates the site over the API, but the default
-`GITHUB_TOKEN` cannot call that endpoint — it fails with *"Create Pages site
-failed: Resource not accessible by integration"* no matter what `permissions:`
-the workflow requests. Enabling Pages needs a repository admin, or a PAT. If you would rather let Vercel build from its own dashboard, link the
-repo there and delete `deploy-vercel.yml` — `vercel.json` already describes the build.
+#### Turning Cloudflare on
 
-Cloudflare reads `_headers` and Vercel reads `vercel.json`; both apply the
-same Content-Security-Policy, which allow-lists exactly the three API origins the
-site talks to.
+1. Create an API token at **My Profile → API Tokens → Create Token** using the
+   *Edit Cloudflare Workers* template, scoped to the account that will host the
+   site. `wrangler deploy` needs `Account · Workers Scripts · Edit`; nothing in
+   this repo needs DNS or zone permissions.
+2. Copy the account ID from any zone's **Overview** page, or from the dashboard
+   URL (`dash.cloudflare.com/<account-id>`).
+3. Add both as repository secrets — `CLOUDFLARE_API_TOKEN` and
+   `CLOUDFLARE_ACCOUNT_ID` — then set the variable `ENABLE_CLOUDFLARE_WORKERS`
+   to `true`.
 
-The Cloudflare target uses [Workers Static Assets][wsa] rather than Pages, which
-Cloudflare has put into maintenance mode. `wrangler.jsonc` holds the whole
-configuration — a name, a compatibility date and `dist/` as the asset directory —
-and there is no Worker script, so Cloudflare serves the files directly. Pushes to
-`main` run `wrangler deploy`; pull requests run `wrangler versions upload`, which
-publishes a preview URL without moving live traffic. Set repo variable
-`CLOUDFLARE_WORKER_NAME` to deploy under a name other than `trialscope`, and run
-`npx wrangler dev` to preview the built site locally.
+The next push to `main` deploys, and the site comes up at
+`https://<worker-name>.<your-subdomain>.workers.dev`. Set repo variable
+`CLOUDFLARE_WORKER_NAME` to deploy under a name other than `trialscope` — worth
+doing on an account that already hosts other Workers. Attaching a custom domain
+is a dashboard action on the Worker itself and needs no repo change.
+
+#### How the Cloudflare target works
+
+It uses [Workers Static Assets][wsa] rather than Pages, which Cloudflare has put
+into maintenance mode. `wrangler.jsonc` holds the whole configuration — a name, a
+compatibility date and `dist/` as the asset directory — and there is no Worker
+script, so Cloudflare serves the files directly. Pushes to `main` run
+`wrangler deploy`; pull requests run `wrangler versions upload`, which publishes a
+preview URL without moving live traffic. `npx wrangler dev` previews the built
+site locally.
+
+Cloudflare reads `_headers` and Vercel reads `vercel.json`; both apply the same
+Content-Security-Policy, which allow-lists exactly the three API origins the site
+talks to. `_headers` is parsed by Workers and applied to asset responses — it is
+never served as a file.
+
+If you would rather let Vercel build from its own dashboard, link the repo there
+and delete `deploy-vercel.yml` — `vercel.json` already describes the build.
 
 [wsa]: https://developers.cloudflare.com/workers/static-assets/
 
