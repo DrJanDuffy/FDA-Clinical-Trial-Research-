@@ -11,7 +11,7 @@
  */
 {
   "name": "trialscope",
-  "compatibility_date": "2026-08-24",
+  "compatibility_date": "2026-08-29",
   "assets": {
     "directory": "./dist"
   },
