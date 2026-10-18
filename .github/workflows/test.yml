@@ -90,6 +90,7 @@ jobs:
             --accept 200,204,206,429
             --exclude-path node_modules
             --exclude '^https://api\.fda\.gov'
+            --exclude '^https://europepmc\.org'
             --exclude '^https://doi\.org/10\.'
             --exclude 'example\.com'
             README.md index.html
