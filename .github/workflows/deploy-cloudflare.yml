@@ -11,13 +11,19 @@ on:
 # Secrets: CLOUDFLARE_API_TOKEN (Workers Scripts:Edit), CLOUDFLARE_ACCOUNT_ID
 # Variable CLOUDFLARE_WORKER_NAME overrides the name in wrangler.jsonc, which
 # matters on an account that already hosts other Workers.
+#
+# FIRST RUN: create the Worker with `npx wrangler deploy` once before enabling
+# this. Cloudflare rejects `versions upload` as a Worker's first upload, so the
+# pull-request job below fails until a deployment exists.
 # Least privilege: nothing here needs to write to the repository.
 permissions:
   contents: read
 
 concurrency:
   group: cloudflare-${{ github.head_ref || github.ref_name }}
-  cancel-in-progress: true
+  # Supersede preview runs freely, but never abort a production deploy midway:
+  # a cancelled deploy leaves main shipped-or-not with no clear signal.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   deploy:
@@ -35,15 +41,25 @@ jobs:
           node-version: '24'
           cache: npm
       - run: npm ci
+      # The Quality workflow runs in parallel on the same push, so it cannot gate
+      # this one. Re-run the suites here: without them a commit that fails lint or
+      # the smoke tests still reaches production.
+      - run: npx playwright install --with-deps chromium
+      - run: npm run lint
+      - run: npm test
       - run: npm run build
 
       # main (and manual runs) promote the new version to the live deployment.
       - name: Deploy
-        if: github.event_name != 'pull_request'
+        # Guard the ref too: workflow_dispatch can be fired from any branch, and
+        # without this a side branch would be promoted to production.
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         uses: cloudflare/wrangler-action@ebbaa1584979971c8614a24965b4405ff95890e0 # v4.0.0
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          # SHA-pinning the action is pointless if the tool it downloads floats.
+          wranglerVersion: '4.151.1'
           command: deploy ${{ vars.CLOUDFLARE_WORKER_NAME && format('--name={0}', vars.CLOUDFLARE_WORKER_NAME) || '' }}
 
       # Pull requests only upload a version. It gets its own preview URL, printed
@@ -54,4 +70,5 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: '4.151.1'
           command: versions upload ${{ vars.CLOUDFLARE_WORKER_NAME && format('--name={0}', vars.CLOUDFLARE_WORKER_NAME) || '' }}
