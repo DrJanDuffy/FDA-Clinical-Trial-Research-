@@ -14,7 +14,9 @@ const F = require('./fixtures.js');
 const path = require('node:path');
 
 // The site is a plain static page, so the suite drives it straight off the filesystem.
-const SITE = 'file://' + path.resolve(__dirname, '..', 'index.html');
+// Point at dist/, not the repo root: testing the sources would not catch a build
+// that drops a file. The pretest hook builds it.
+const SITE = 'file://' + path.resolve(__dirname, '..', 'dist', 'index.html');
 
 // Honour a preinstalled browser if one is set, otherwise let Playwright find its own.
 const LAUNCH = process.env.PLAYWRIGHT_CHROMIUM ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM } : {};
