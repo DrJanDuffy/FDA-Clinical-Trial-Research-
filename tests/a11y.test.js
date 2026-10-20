@@ -17,7 +17,7 @@ const { AxeBuilder } = require('@axe-core/playwright');
 const F = require('./fixtures.js');
 const path = require('node:path');
 
-const SITE = 'file://' + path.resolve(__dirname, '..', 'index.html');
+const SITE = 'file://' + path.resolve(__dirname, '..', 'dist', 'index.html');
 const LAUNCH = process.env.PLAYWRIGHT_CHROMIUM ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM } : {};
 
 const TABS = ['overview', 'trials', 'research', 'approvals', 'safety', 'watchlist'];
